@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Banca — Treino de SQL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root{
+  --bg: #10171A;
+  --surface: #1A2327;
+  --surface-2: #212C31;
+  --line: #2C393F;
+  --amber: #E8A23D;
+  --amber-dim: #B87F30;
+  --teal: #5FB3A0;
+  --coral: #E0705E;
+  --text: #EDEAE2;
+  --muted: #869097;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+*{ box-sizing: border-box; margin:0; padding:0; }
+html,body{ background: var(--bg); color: var(--text); font-family: var(--font-display); -webkit-tap-highlight-color: transparent; }
+body{ padding-bottom: 48px; }
+
+/* ---------- Header / signature ER diagram ---------- */
+.hero{
+  padding: 22px 18px 14px;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+}
+.hero-eyebrow{
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.hero h1{
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+.hero p{
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.5;
+  max-width: 46ch;
+}
+#erSvg{ width: 100%; height: auto; margin-top: 14px; display:block; }
+.er-table rect{ fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.er-table text{ font-family: var(--font-mono); fill: var(--text); }
+.er-table .tname{ font-weight: 700; fill: var(--amber); font-size: 10px; }
+.er-table .fname{ font-size: 8.5px; fill: var(--muted); }
+.er-link{ stroke: var(--amber-dim); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
+.er-pulse{ animation: erpulse 2.6s ease-in-out infinite; }
+@keyframes erpulse{ 0%,100%{ opacity:.35 } 50%{ opacity:.9 } }
+
+/* ---------- Progress bar ---------- */
+.progress-wrap{ padding: 12px 18px 0; }
+.progress-track{ height: 5px; background: var(--surface-2); border-radius: 3px; overflow:hidden; }
+.progress-fill{ height:100%; background: linear-gradient(90deg, var(--amber-dim), var(--amber)); transition: width .4s ease; border-radius: 3px; }
+.progress-label{ font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 6px; display:flex; justify-content: space-between; }
+
+/* ---------- Exercise card ---------- */
+.card{
+  margin: 16px 14px 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 16px 18px;
+}
+.ex-tag{
+  display:inline-block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--bg);
+  background: var(--amber);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.ex-title{ font-size: 16px; font-weight: 600; line-height: 1.4; }
+.ex-desc{ color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.55; }
+.hint-toggle{
+  margin-top: 10px;
+  background: none; border: none; color: var(--teal);
+  font-family: var(--font-mono); font-size: 12px; cursor: pointer; padding: 0;
+}
+.hint-box{
+  display:none;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--surface-2);
+  border-left: 2px solid var(--teal);
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+.hint-box.show{ display:block; }
+
+/* ---------- Editor ---------- */
+.editor-wrap{ margin-top: 14px; }
+.editor-label{ font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); letter-spacing:.08em; margin-bottom: 6px; text-transform: uppercase;}
+textarea#sqlInput{
+  width: 100%;
+  min-height: 92px;
+  background: #0D1315;
+  color: var(--amber);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+textarea#sqlInput:focus{ border-color: var(--amber-dim); }
+
+.btn-row{ display:flex; gap:8px; margin-top: 10px; }
+button{ font-family: var(--font-display); cursor: pointer; border: none; }
+.btn-run{
+  flex:1;
+  background: var(--amber);
+  color: #1A1204;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 11px;
+  border-radius: 8px;
+}
+.btn-run:active{ background: var(--amber-dim); }
+.btn-reset{
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 13px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+/* ---------- Result ---------- */
+.result-wrap{ margin-top: 14px; }
+.result-status{
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.result-status.ok{ background: rgba(95,179,160,0.12); color: var(--teal); border: 1px solid rgba(95,179,160,0.3); }
+.result-status.err{ background: rgba(224,112,94,0.12); color: var(--coral); border: 1px solid rgba(224,112,94,0.3); }
+.result-status.neutral{ background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+
+.table-scroll{ overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table.result-table{ border-collapse: collapse; width: 100%; font-family: var(--font-mono); font-size: 12px; }
+table.result-table th{
+  background: var(--surface-2); color: var(--amber); text-align:left;
+  padding: 7px 10px; white-space: nowrap; border-bottom: 1px solid var(--line);
+}
+table.result-table td{ padding: 7px 10px; white-space: nowrap; border-bottom: 1px solid var(--line); color: var(--text); }
+table.result-table tr:last-child td{ border-bottom: none; }
+
+/* ---------- Nav ---------- */
+.nav-row{ display:flex; gap:8px; margin: 16px 14px 0; }
+.nav-btn{
+  flex:1; background: var(--surface); border: 1px solid var(--line); color: var(--text);
+  padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
+}
+.nav-btn:disabled{ opacity: .35; }
+.nav-btn.primary{ background: var(--teal); color: #0C1F1A; border-color: var(--teal); }
+
+/* ---------- Schema reference ---------- */
+.schema-toggle{
+  margin: 16px 14px 0; width: calc(100% - 28px);
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+  padding: 10px; border-radius: 8px; font-family: var(--font-mono); font-size: 12px;
+  display:flex; justify-content: space-between; align-items:center;
+}
+.schema-body{ display:none; margin: 8px 14px 0; }
+.schema-body.show{ display:block; }
+.schema-table{ background: var(--surface); border:1px solid var(--line); border-radius:8px; padding: 10px 12px; margin-bottom: 8px; }
+.schema-table h4{ font-family: var(--font-mono); color: var(--amber); font-size: 12.5px; margin-bottom: 4px; }
+.schema-table div{ font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+
+/* ---------- Done state ---------- */
+.done-banner{
+  margin: 16px 14px 0; padding: 20px 16px; text-align:center;
+  background: linear-gradient(160deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--teal); border-radius: 10px;
+}
+.done-banner .big{ font-size: 28px; }
+.done-banner p{ color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+.loading-note{ padding: 40px 18px; text-align:center; color: var(--muted); font-family: var(--font-mono); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Banca de treino</div>
+  <h1>SQL na Biblioteca Municipal</h1>
+  <p>Um banco SQLite de verdade, rodando no seu celular. Resolva os exercícios escrevendo consultas reais sobre livros, autores e empréstimos.</p>
+  <svg id="erSvg" viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label"><span id="progressText">Exercício 1 de 10</span><span id="progressPct">0%</span></div>
+</div>
+
+<button class="schema-toggle" id="schemaToggle">
+  <span>📐 Ver estrutura das tabelas</span><span id="schemaArrow">▾</span>
+</button>
+<div class="schema-body" id="schemaBody"></div>
+
+<div id="app">
+  <div class="loading-note" id="loadingNote">carregando motor SQLite…</div>
+</div>
+
+<div class="nav-row" id="navRow" style="display:none;">
+  <button class="nav-btn" id="prevBtn">← anterior</button>
+  <button class="nav-btn primary" id="nextBtn">próximo →</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script>
+const SCHEMA_SQL = `
+CREATE TABLE autores (
+  id INTEGER PRIMARY KEY,
+  nome TEXT,
+  nacionalidade TEXT
+);
+CREATE TABLE livros (
+  id INTEGER PRIMARY KEY,
+  titulo TEXT,
+  autor_id INTEGER,
+  ano INTEGER,
+  genero TEXT,
+  disponivel INTEGER
+);
+CREATE TABLE usuarios (
+  id INTEGER PRIMARY KEY,
+  nome TEXT,
+  cidade TEXT
+);
+CREATE TABLE emprestimos (
+  id INTEGER PRIMARY KEY,
+  livro_id INTEGER,
+  usuario_id INTEGER,
+  data_emprestimo TEXT,
+  data_devolucao TEXT
+);
+
+INSERT INTO autores VALUES
+ (1,'Machado de Assis','Brasil'),
+ (2,'Clarice Lispector','Brasil'),
+ (3,'Jorge Amado','Brasil'),
+ (4,'Gabriel García Márquez','Colômbia'),
+ (5,'Isabel Allende','Chile'),
+ (6,'José Saramago','Portugal');
+
+INSERT INTO livros VALUES
+ (1,'Dom Casmurro',1,1899,'Romance',1),
+ (2,'Memórias Póstumas de Brás Cubas',1,1881,'Romance',1),
+ (3,'A Hora da Estrela',2,1977,'Romance',0),
+ (4,'Perto do Coração Selvagem',2,1943,'Romance',1),
+ (5,'Gabriela, Cravo e Canela',3,1958,'Romance',1),
+ (6,'Capitães da Areia',3,1937,'Romance',0),
+ (7,'Cem Anos de Solidão',4,1967,'Realismo Mágico',1),
+ (8,'O Amor nos Tempos do Cólera',4,1985,'Romance',1),
+ (9,'A Casa dos Espíritos',5,1982,'Realismo Mágico',0),
+ (10,'Ensaio sobre a Cegueira',6,1995,'Ficção',1),
+ (11,'O Evangelho Segundo Jesus Cristo',6,1991,'Ficção',1);
+
+INSERT INTO usuarios VALUES
+ (1,'Fernanda Lima','Fortaleza'),
+ (2,'Bruno Alves','Fortaleza'),
+ (3,'Carla Dias','Sobral'),
+ (4,'Diego Rocha','Juazeiro do Norte'),
+ (5,'Elisa Nunes','Fortaleza');
+
+INSERT INTO emprestimos VALUES
+ (1,3,1,'2026-05-02',NULL),
+ (2,6,2,'2026-05-10',NULL),
+ (3,9,3,'2026-05-15',NULL),
+ (4,1,1,'2026-04-01','2026-04-20'),
+ (5,7,4,'2026-04-18','2026-05-01'),
+ (6,5,5,'2026-06-01',NULL),
+ (7,2,2,'2026-03-11','2026-03-25');
+`;
+
+const EXERCISES = [
+  {
+    tag: 'SELECT básico',
+    title: 'Liste todos os livros',
+    desc: 'Mostre o título e o ano de todos os livros da tabela livros.',
+    hint: 'SELECT titulo, ano FROM livros;',
+    expected: `SELECT titulo, ano FROM livros;`
+  },
+  {
+    tag: 'WHERE',
+    title: 'Livros disponíveis',
+    desc: 'Liste o título dos livros que estão disponíveis (disponivel = 1) para empréstimo.',
+    hint: 'Use WHERE disponivel = 1',
+    expected: `SELECT titulo FROM livros WHERE disponivel = 1;`
+  },
+  {
+    tag: 'WHERE + comparação',
+    title: 'Clássicos do século XIX',
+    desc: 'Liste título e ano dos livros publicados antes de 1900.',
+    hint: 'Use WHERE ano < 1900',
+    expected: `SELECT titulo, ano FROM livros WHERE ano < 1900;`
+  },
+  {
+    tag: 'ORDER BY',
+    title: 'Do mais novo para o mais antigo',
+    desc: 'Liste título e ano de todos os livros, ordenados do mais recente para o mais antigo.',
+    hint: 'ORDER BY ano DESC',
+    expected: `SELECT titulo, ano FROM livros ORDER BY ano DESC;`
+  },
+  {
+    tag: 'COUNT',
+    title: 'Quantos livros existem?',
+    desc: 'Conte o número total de livros no acervo. Chame a coluna resultante de total.',
+    hint: 'SELECT COUNT(*) AS total FROM livros;',
+    expected: `SELECT COUNT(*) AS total FROM livros;`
+  },
+  {
+    tag: 'GROUP BY',
+    title: 'Livros por gênero',
+    desc: 'Conte quantos livros existem em cada gênero. Mostre genero e a quantidade (chame de qtd), ordenado do gênero com mais livros para o com menos.',
+    hint: 'GROUP BY genero ... ORDER BY qtd DESC',
+    expected: `SELECT genero, COUNT(*) AS qtd FROM livros GROUP BY genero ORDER BY qtd DESC;`
+  },
+  {
+    tag: 'JOIN',
+    title: 'Livro com nome do autor',
+    desc: 'Liste o título de cada livro junto com o nome do autor correspondente (junte livros e autores).',
+    hint: 'JOIN autores ON livros.autor_id = autores.id',
+    expected: `SELECT livros.titulo, autores.nome FROM livros JOIN autores ON livros.autor_id = autores.id;`
+  },
+  {
+    tag: 'JOIN + WHERE',
+    title: 'Autores brasileiros',
+    desc: 'Liste o título dos livros escritos por autores brasileiros (nacionalidade = "Brasil").',
+    hint: 'Faça o JOIN e filtre por autores.nacionalidade = \'Brasil\'',
+    expected: `SELECT livros.titulo FROM livros JOIN autores ON livros.autor_id = autores.id WHERE autores.nacionalidade = 'Brasil';`
+  },
+  {
+    tag: 'JOIN triplo',
+    title: 'Quem está com o livro emprestado?',
+    desc: 'Liste o título do livro e o nome do usuário para todos os empréstimos que ainda não foram devolvidos (data_devolucao é NULL).',
+    hint: 'Junte emprestimos com livros e usuarios; filtre WHERE data_devolucao IS NULL',
+    expected: `SELECT livros.titulo, usuarios.nome FROM emprestimos JOIN livros ON emprestimos.livro_id = livros.id JOIN usuarios ON emprestimos.usuario_id = usuarios.id WHERE emprestimos.data_devolucao IS NULL;`
+  },
+  {
+    tag: 'Subconsulta',
+    title: 'Autores sem nenhum livro emprestado',
+    desc: 'Liste o nome dos autores cujos livros nunca aparecem na tabela emprestimos.',
+    hint: 'Use NOT IN com uma subconsulta que busca autor_id dos livros que foram emprestados',
+    expected: `SELECT nome FROM autores WHERE id NOT IN (SELECT autor_id FROM livros WHERE id IN (SELECT livro_id FROM emprestimos));`
+  }
+];
+
+let db = null;
+let current = 0;
+let solved = new Array(EXERCISES.length).fill(false);
+
+function normalizeRows(res){
+  if(!res || !res.length) return { columns: [], values: [] };
+  return { columns: res[0].columns, values: res[0].values };
+}
+
+function rowsEqual(a, b){
+  if(a.values.length !== b.values.length) return false;
+  const norm = (rows) => rows.map(r => r.map(v => v===null?'∅':String(v)).join('|')).sort();
+  const na = norm(a.values), nb = norm(b.values);
+  for(let i=0;i<na.length;i++){ if(na[i] !== nb[i]) return false; }
+  return true;
+}
+
+function renderTable(res){
+  if(!res.columns.length){
+    return '<div class="result-status neutral">Consulta executada — nenhuma linha retornada.</div>';
+  }
+  let html = '<div class="table-scroll"><table class="result-table"><thead><tr>';
+  res.columns.forEach(c => html += `<th>${c}</th>`);
+  html += '</tr></thead><tbody>';
+  res.values.slice(0,50).forEach(row => {
+    html += '<tr>' + row.map(v => `<td>${v===null?'<span style="color:var(--muted)">null</span>':v}</td>`).join('') + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  if(res.values.length > 50) html += `<div class="result-status neutral" style="margin-top:8px;">mostrando 50 de ${res.values.length} linhas</div>`;
+  return html;
+}
+
+function renderExercise(){
+  const ex = EXERCISES[current];
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card">
+      <span class="ex-tag">${ex.tag}${solved[current] ? ' · resolvido ✓' : ''}</span>
+      <div class="ex-title">${ex.title}</div>
+      <div class="ex-desc">${ex.desc}</div>
+      <button class="hint-toggle" id="hintToggle">💡 mostrar dica</button>
+      <div class="hint-box" id="hintBox">${ex.hint}</div>
+
+      <div class="editor-wrap">
+        <div class="editor-label">Sua consulta</div>
+        <textarea id="sqlInput" spellcheck="false" placeholder="SELECT ...">${solved[current] ? ex.expected : ''}</textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn-run" id="runBtn">▶ Executar</button>
+        <button class="btn-reset" id="clearBtn">limpar</button>
+      </div>
+      <div class="result-wrap" id="resultWrap"></div>
+    </div>
+  `;
+
+  document.getElementById('hintToggle').onclick = () => {
+    document.getElementById('hintBox').classList.toggle('show');
+  };
+  document.getElementById('clearBtn').onclick = () => {
+    document.getElementById('sqlInput').value = '';
+  };
+  document.getElementById('runBtn').onclick = runQuery;
+
+  updateProgress();
+  updateNav();
+}
+
+function runQuery(){
+  const input = document.getElementById('sqlInput').value.trim();
+  const wrap = document.getElementById('resultWrap');
+  if(!input){
+    wrap.innerHTML = '<div class="result-status err">Escreva uma consulta antes de executar.</div>';
+    return;
+  }
+  try{
+    const userRes = normalizeRows(db.exec(input));
+    const expectedRes = normalizeRows(db.exec(EXERCISES[current].expected));
+    const correct = rowsEqual(userRes, expectedRes);
+    let statusHtml;
+    if(correct){
+      solved[current] = true;
+      statusHtml = '<div class="result-status ok">✓ Correto! Resultado bate com o esperado.</div>';
+    } else {
+      statusHtml = '<div class="result-status err">✗ A consulta rodou, mas o resultado é diferente do esperado. Tente de novo.</div>';
+    }
+    wrap.innerHTML = statusHtml + renderTable(userRes);
+    updateProgress();
+    updateNav();
+  } catch(e){
+    wrap.innerHTML = `<div class="result-status err">Erro de SQL: ${e.message}</div>`;
+  }
+}
+
+function updateProgress(){
+  const done = solved.filter(Boolean).length;
+  const pct = Math.round((done/EXERCISES.length)*100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `Exercício ${current+1} de ${EXERCISES.length}`;
+  document.getElementById('progressPct').textContent = `${done}/${EXERCISES.length} resolvidos`;
+}
+
+function updateNav(){
+  document.getElementById('prevBtn').disabled = current === 0;
+  const nextBtn = document.getElementById('nextBtn');
+  if(current === EXERCISES.length - 1){
+    nextBtn.textContent = solved.every(Boolean) ? 'ver resumo →' : 'próximo →';
+  } else {
+    nextBtn.textContent = 'próximo →';
+  }
+}
+
+document.getElementById('prevBtn').onclick = () => {
+  if(current > 0){ current--; renderExercise(); }
+};
+document.getElementById('nextBtn').onclick = () => {
+  if(current < EXERCISES.length - 1){ current++; renderExercise(); }
+  else if(solved.every(Boolean)){ renderDone(); }
+  else { current = EXERCISES.findIndex(( _,i) => !solved[i]); renderExercise(); }
+};
+
+function renderDone(){
+  document.getElementById('navRow').style.display = 'none';
+  document.getElementById('app').innerHTML = `
+    <div class="done-banner">
+      <div class="big">🏁</div>
+      <div class="ex-title" style="margin-top:6px;">Trilha concluída!</div>
+      <p>Você resolveu os ${EXERCISES.length} exercícios: SELECT, WHERE, ORDER BY, agregações, JOIN e subconsultas.</p>
+    </div>
+  `;
+}
+
+document.getElementById('schemaToggle').onclick = () => {
+  const body = document.getElementById('schemaBody');
+  const arrow = document.getElementById('schemaArrow');
+  body.classList.toggle('show');
+  arrow.textContent = body.classList.contains('show') ? '▴' : '▾';
+};
+
+function renderSchemaRef(){
+  const tables = [
+    { name: 'autores', cols: ['id (PK)','nome','nacionalidade'] },
+    { name: 'livros', cols: ['id (PK)','titulo','autor_id (FK → autores.id)','ano','genero','disponivel (0/1)'] },
+    { name: 'usuarios', cols: ['id (PK)','nome','cidade'] },
+    { name: 'emprestimos', cols: ['id (PK)','livro_id (FK → livros.id)','usuario_id (FK → usuarios.id)','data_emprestimo','data_devolucao'] }
+  ];
+  document.getElementById('schemaBody').innerHTML = tables.map(t => `
+    <div class="schema-table">
+      <h4>${t.name}</h4>
+      <div>${t.cols.join('<br>')}</div>
+    </div>
+  `).join('');
+}
+
+function renderERDiagram(){
+  const tables = [
+    { name:'autores', x:8,  y:10, fields:['id','nome'] },
+    { name:'livros',  x:120, y:10, fields:['id','autor_id','titulo'] },
+    { name:'usuarios',x:8,  y:78, fields:['id','nome'] },
+    { name:'emprestimos', x:120, y:78, fields:['livro_id','usuario_id'] }
+  ];
+  const w = 108, rowH = 12, headerH = 16;
+  let svg = '';
+  // links
+  svg += `<line class="er-link er-pulse" x1="174" y1="42" x2="174" y2="78" />`;
+  svg += `<line class="er-link er-pulse" x1="62" y1="42" x2="120" y2="90" />`;
+  svg += `<line class="er-link er-pulse" x1="62" y1="78" x2="120" y2="90" />`;
+  tables.forEach(t => {
+    const h = headerH + t.fields.length*rowH + 6;
+    svg += `<g class="er-table" transform="translate(${t.x},${t.y})">
+      <rect width="${w}" height="${h}" rx="5"/>
+      <text x="8" y="13" class="tname">${t.name}</text>
+      ${t.fields.map((f,i) => `<text x="8" y="${headerH + 9 + i*rowH}" class="fname">${f}</text>`).join('')}
+    </g>`;
+  });
+  document.getElementById('erSvg').innerHTML = svg;
+}
+
+async function init(){
+  renderSchemaRef();
+  renderERDiagram();
+  try{
+    const SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` });
+    db = new SQL.Database();
+    db.run(SCHEMA_SQL);
+    document.getElementById('navRow').style.display = 'flex';
+    renderExercise();
+  } catch(e){
+    document.getElementById('app').innerHTML = `<div class="loading-note">Não foi possível carregar o motor SQL: ${e.message}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

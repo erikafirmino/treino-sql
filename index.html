@@ -16,6 +16,7 @@
   --amber-dim: #B87F30;
   --teal: #5FB3A0;
   --coral: #E0705E;
+  --violet: #9C8CD9;
   --text: #EDEAE2;
   --muted: #869097;
   --font-display: 'Space Grotesk', sans-serif;
@@ -32,12 +33,18 @@ body{ padding-bottom: 48px; }
   position: relative;
   overflow: hidden;
 }
+.hero-top{ display:flex; align-items:center; justify-content: space-between; gap: 8px; }
 .hero-eyebrow{
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--amber);
   text-transform: uppercase;
+}
+.switch-track{
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 10px; cursor: pointer;
 }
 .hero h1{
   font-size: 22px;
@@ -61,11 +68,32 @@ body{ padding-bottom: 48px; }
 .er-pulse{ animation: erpulse 2.6s ease-in-out infinite; }
 @keyframes erpulse{ 0%,100%{ opacity:.35 } 50%{ opacity:.9 } }
 
+/* ---------- Track select ---------- */
+.track-select{ padding: 18px 14px 4px; }
+.track-card{
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 16px; margin-bottom: 12px; display:flex; gap: 12px; align-items:flex-start;
+  cursor: pointer;
+}
+.track-card:active{ border-color: var(--amber-dim); }
+.track-emoji{ font-size: 26px; line-height:1; }
+.track-info h3{ font-size: 15.5px; font-weight: 700; }
+.track-info p{ color: var(--muted); font-size: 12.5px; margin-top: 4px; line-height: 1.5; }
+.track-meta{ font-family: var(--font-mono); font-size: 10.5px; color: var(--teal); margin-top: 6px; }
+
 /* ---------- Progress bar ---------- */
 .progress-wrap{ padding: 12px 18px 0; }
 .progress-track{ height: 5px; background: var(--surface-2); border-radius: 3px; overflow:hidden; }
 .progress-fill{ height:100%; background: linear-gradient(90deg, var(--amber-dim), var(--amber)); transition: width .4s ease; border-radius: 3px; }
 .progress-label{ font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 6px; display:flex; justify-content: space-between; }
+
+.infinite-row{ padding: 10px 14px 0; display:flex; }
+.infinite-btn{
+  font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 12px; display:flex; align-items:center; gap:6px;
+}
+.infinite-btn.on{ color: var(--violet); border-color: var(--violet); background: rgba(156,140,217,0.1); }
 
 /* ---------- Exercise card ---------- */
 .card{
@@ -201,41 +229,54 @@ table.result-table tr:last-child td{ border-bottom: none; }
 }
 .done-banner .big{ font-size: 28px; }
 .done-banner p{ color: var(--muted); font-size: 13px; margin-top: 6px; }
+.done-banner .btn-run{ margin-top: 14px; }
 
 .loading-note{ padding: 40px 18px; text-align:center; color: var(--muted); font-family: var(--font-mono); font-size: 13px; }
+.hidden{ display:none !important; }
 </style>
 </head>
 <body>
 
 <div class="hero">
-  <div class="hero-eyebrow">Banca de treino</div>
-  <h1>SQL na Biblioteca Municipal</h1>
-  <p>Um banco SQLite de verdade, rodando no seu celular. Resolva os exercícios escrevendo consultas reais sobre livros, autores e empréstimos.</p>
+  <div class="hero-top">
+    <div>
+      <div class="hero-eyebrow" id="heroEyebrow">Banca de treino</div>
+      <h1 id="heroTitle">Treino de SQL</h1>
+    </div>
+    <button class="switch-track hidden" id="switchTrackBtn">↩ trocar trilha</button>
+  </div>
+  <p id="heroDesc">Um banco SQLite de verdade, rodando no seu celular. Escolha uma trilha para começar.</p>
   <svg id="erSvg" viewBox="0 0 340 130" xmlns="http://www.w3.org/2000/svg"></svg>
 </div>
 
-<div class="progress-wrap">
+<div class="track-select" id="trackSelect"></div>
+
+<div class="progress-wrap hidden" id="progressWrap">
   <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
   <div class="progress-label"><span id="progressText">Exercício 1 de 10</span><span id="progressPct">0%</span></div>
 </div>
+<div class="infinite-row hidden" id="infiniteRow">
+  <button class="infinite-btn" id="infiniteBtn">🔀 modo infinito: desligado</button>
+</div>
 
-<button class="schema-toggle" id="schemaToggle">
+<button class="schema-toggle hidden" id="schemaToggle">
   <span>📐 Ver estrutura das tabelas</span><span id="schemaArrow">▾</span>
 </button>
 <div class="schema-body" id="schemaBody"></div>
 
-<div id="app">
-  <div class="loading-note" id="loadingNote">carregando motor SQLite…</div>
-</div>
+<div id="app"></div>
 
-<div class="nav-row" id="navRow" style="display:none;">
+<div class="nav-row hidden" id="navRow">
   <button class="nav-btn" id="prevBtn">← anterior</button>
   <button class="nav-btn primary" id="nextBtn">próximo →</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 <script>
-const SCHEMA_SQL = `
+/* ============================================================
+   TRILHA 1 — BIBLIOTECA MUNICIPAL
+   ============================================================ */
+const BIBLIOTECA_SCHEMA = `
 CREATE TABLE autores (
   id INTEGER PRIMARY KEY,
   nome TEXT,
@@ -300,88 +341,285 @@ INSERT INTO emprestimos VALUES
  (7,2,2,'2026-03-11','2026-03-25');
 `;
 
-const EXERCISES = [
-  {
-    tag: 'SELECT básico',
-    title: 'Liste todos os livros',
-    desc: 'Mostre o título e o ano de todos os livros da tabela livros.',
-    hint: 'SELECT titulo, ano FROM livros;',
-    expected: `SELECT titulo, ano FROM livros;`
-  },
-  {
-    tag: 'WHERE',
-    title: 'Livros disponíveis',
-    desc: 'Liste o título dos livros que estão disponíveis (disponivel = 1) para empréstimo.',
-    hint: 'Use WHERE disponivel = 1',
-    expected: `SELECT titulo FROM livros WHERE disponivel = 1;`
-  },
-  {
-    tag: 'WHERE + comparação',
-    title: 'Clássicos do século XIX',
-    desc: 'Liste título e ano dos livros publicados antes de 1900.',
-    hint: 'Use WHERE ano < 1900',
-    expected: `SELECT titulo, ano FROM livros WHERE ano < 1900;`
-  },
-  {
-    tag: 'ORDER BY',
-    title: 'Do mais novo para o mais antigo',
-    desc: 'Liste título e ano de todos os livros, ordenados do mais recente para o mais antigo.',
-    hint: 'ORDER BY ano DESC',
-    expected: `SELECT titulo, ano FROM livros ORDER BY ano DESC;`
-  },
-  {
-    tag: 'COUNT',
-    title: 'Quantos livros existem?',
-    desc: 'Conte o número total de livros no acervo. Chame a coluna resultante de total.',
-    hint: 'SELECT COUNT(*) AS total FROM livros;',
-    expected: `SELECT COUNT(*) AS total FROM livros;`
-  },
-  {
-    tag: 'GROUP BY',
-    title: 'Livros por gênero',
-    desc: 'Conte quantos livros existem em cada gênero. Mostre genero e a quantidade (chame de qtd), ordenado do gênero com mais livros para o com menos.',
-    hint: 'GROUP BY genero ... ORDER BY qtd DESC',
-    expected: `SELECT genero, COUNT(*) AS qtd FROM livros GROUP BY genero ORDER BY qtd DESC;`
-  },
-  {
-    tag: 'JOIN',
-    title: 'Livro com nome do autor',
-    desc: 'Liste o título de cada livro junto com o nome do autor correspondente (junte livros e autores).',
-    hint: 'JOIN autores ON livros.autor_id = autores.id',
-    expected: `SELECT livros.titulo, autores.nome FROM livros JOIN autores ON livros.autor_id = autores.id;`
-  },
-  {
-    tag: 'JOIN + WHERE',
-    title: 'Autores brasileiros',
-    desc: 'Liste o título dos livros escritos por autores brasileiros (nacionalidade = "Brasil").',
-    hint: 'Faça o JOIN e filtre por autores.nacionalidade = \'Brasil\'',
-    expected: `SELECT livros.titulo FROM livros JOIN autores ON livros.autor_id = autores.id WHERE autores.nacionalidade = 'Brasil';`
-  },
-  {
-    tag: 'JOIN triplo',
-    title: 'Quem está com o livro emprestado?',
-    desc: 'Liste o título do livro e o nome do usuário para todos os empréstimos que ainda não foram devolvidos (data_devolucao é NULL).',
-    hint: 'Junte emprestimos com livros e usuarios; filtre WHERE data_devolucao IS NULL',
-    expected: `SELECT livros.titulo, usuarios.nome FROM emprestimos JOIN livros ON emprestimos.livro_id = livros.id JOIN usuarios ON emprestimos.usuario_id = usuarios.id WHERE emprestimos.data_devolucao IS NULL;`
-  },
-  {
-    tag: 'Subconsulta',
-    title: 'Autores sem nenhum livro emprestado',
-    desc: 'Liste o nome dos autores cujos livros nunca aparecem na tabela emprestimos.',
-    hint: 'Use NOT IN com uma subconsulta que busca autor_id dos livros que foram emprestados',
-    expected: `SELECT nome FROM autores WHERE id NOT IN (SELECT autor_id FROM livros WHERE id IN (SELECT livro_id FROM emprestimos));`
-  }
+const BIBLIOTECA_EXERCISES = [
+  { tag:'SELECT básico', title:'Liste todos os livros',
+    desc:'Mostre o título e o ano de todos os livros da tabela livros.',
+    hint:'SELECT titulo, ano FROM livros;',
+    expected:`SELECT titulo, ano FROM livros;` },
+  { tag:'WHERE', title:'Livros disponíveis',
+    desc:'Liste o título dos livros que estão disponíveis (disponivel = 1) para empréstimo.',
+    hint:'Use WHERE disponivel = 1',
+    expected:`SELECT titulo FROM livros WHERE disponivel = 1;` },
+  { tag:'WHERE + comparação', title:'Clássicos do século XIX',
+    desc:'Liste título e ano dos livros publicados antes de 1900.',
+    hint:'Use WHERE ano < 1900',
+    expected:`SELECT titulo, ano FROM livros WHERE ano < 1900;` },
+  { tag:'ORDER BY', title:'Do mais novo para o mais antigo',
+    desc:'Liste título e ano de todos os livros, ordenados do mais recente para o mais antigo.',
+    hint:'ORDER BY ano DESC',
+    expected:`SELECT titulo, ano FROM livros ORDER BY ano DESC;` },
+  { tag:'COUNT', title:'Quantos livros existem?',
+    desc:'Conte o número total de livros no acervo. Chame a coluna resultante de total.',
+    hint:'SELECT COUNT(*) AS total FROM livros;',
+    expected:`SELECT COUNT(*) AS total FROM livros;` },
+  { tag:'GROUP BY', title:'Livros por gênero',
+    desc:'Conte quantos livros existem em cada gênero. Mostre genero e a quantidade (chame de qtd), ordenado do gênero com mais livros para o com menos.',
+    hint:'GROUP BY genero ... ORDER BY qtd DESC',
+    expected:`SELECT genero, COUNT(*) AS qtd FROM livros GROUP BY genero ORDER BY qtd DESC;` },
+  { tag:'JOIN', title:'Livro com nome do autor',
+    desc:'Liste o título de cada livro junto com o nome do autor correspondente (junte livros e autores).',
+    hint:'JOIN autores ON livros.autor_id = autores.id',
+    expected:`SELECT livros.titulo, autores.nome FROM livros JOIN autores ON livros.autor_id = autores.id;` },
+  { tag:'JOIN + WHERE', title:'Autores brasileiros',
+    desc:'Liste o título dos livros escritos por autores brasileiros (nacionalidade = "Brasil").',
+    hint:"Faça o JOIN e filtre por autores.nacionalidade = 'Brasil'",
+    expected:`SELECT livros.titulo FROM livros JOIN autores ON livros.autor_id = autores.id WHERE autores.nacionalidade = 'Brasil';` },
+  { tag:'JOIN triplo', title:'Quem está com o livro emprestado?',
+    desc:'Liste o título do livro e o nome do usuário para todos os empréstimos que ainda não foram devolvidos (data_devolucao é NULL).',
+    hint:'Junte emprestimos com livros e usuarios; filtre WHERE data_devolucao IS NULL',
+    expected:`SELECT livros.titulo, usuarios.nome FROM emprestimos JOIN livros ON emprestimos.livro_id = livros.id JOIN usuarios ON emprestimos.usuario_id = usuarios.id WHERE emprestimos.data_devolucao IS NULL;` },
+  { tag:'Subconsulta', title:'Autores sem nenhum livro emprestado',
+    desc:'Liste o nome dos autores cujos livros nunca aparecem na tabela emprestimos.',
+    hint:'Use NOT IN com uma subconsulta que busca autor_id dos livros que foram emprestados',
+    expected:`SELECT nome FROM autores WHERE id NOT IN (SELECT autor_id FROM livros WHERE id IN (SELECT livro_id FROM emprestimos));` },
+  { tag:'LEFT JOIN', title:'Livros que nunca foram emprestados',
+    desc:'Liste o título dos livros que nunca aparecem na tabela emprestimos, usando LEFT JOIN em vez de subconsulta.',
+    hint:'LEFT JOIN emprestimos ... WHERE emprestimos.id IS NULL',
+    expected:`SELECT livros.titulo FROM livros LEFT JOIN emprestimos ON livros.id = emprestimos.livro_id WHERE emprestimos.id IS NULL;` },
+  { tag:'HAVING', title:'Autores com mais de um livro',
+    desc:'Liste o nome dos autores que têm mais de 1 livro no acervo, junto com a quantidade (chame de qtd).',
+    hint:'GROUP BY autores.nome ... HAVING COUNT(*) > 1',
+    expected:`SELECT autores.nome, COUNT(*) AS qtd FROM livros JOIN autores ON livros.autor_id = autores.id GROUP BY autores.nome HAVING COUNT(*) > 1;` },
+  { tag:'Datas', title:'Empréstimos de maio de 2026',
+    desc:'Liste todos os empréstimos (todas as colunas) cuja data_emprestimo é de maio de 2026.',
+    hint:"Use WHERE data_emprestimo LIKE '2026-05%'",
+    expected:`SELECT * FROM emprestimos WHERE data_emprestimo LIKE '2026-05%';` },
+  { tag:'CASE WHEN', title:'Status legível do livro',
+    desc:'Liste o título de cada livro junto com uma coluna status: "Disponível" se disponivel = 1, senão "Emprestado".',
+    hint:"CASE WHEN disponivel = 1 THEN 'Disponível' ELSE 'Emprestado' END AS status",
+    expected:`SELECT titulo, CASE WHEN disponivel = 1 THEN 'Disponível' ELSE 'Emprestado' END AS status FROM livros;` },
+  { tag:'Subconsulta correlacionada', title:'O livro mais recente de cada autor',
+    desc:'Liste título e ano apenas dos livros que são o mais recente (maior ano) do respectivo autor.',
+    hint:'WHERE ano = (SELECT MAX(ano) FROM livros l2 WHERE l2.autor_id = livros.autor_id) — dê um apelido (alias) à tabela externa',
+    expected:`SELECT titulo, ano FROM livros l1 WHERE ano = (SELECT MAX(ano) FROM livros l2 WHERE l2.autor_id = l1.autor_id);` },
 ];
 
-let db = null;
-let current = 0;
-let solved = new Array(EXERCISES.length).fill(false);
+const BIBLIOTECA_SCHEMA_REF = [
+  { name:'autores', cols:['id (PK)','nome','nacionalidade'] },
+  { name:'livros', cols:['id (PK)','titulo','autor_id (FK → autores.id)','ano','genero','disponivel (0/1)'] },
+  { name:'usuarios', cols:['id (PK)','nome','cidade'] },
+  { name:'emprestimos', cols:['id (PK)','livro_id (FK → livros.id)','usuario_id (FK → usuarios.id)','data_emprestimo','data_devolucao'] }
+];
 
+/* ============================================================
+   TRILHA 2 — LOJA ONLINE
+   ============================================================ */
+const LOJA_SCHEMA = `
+CREATE TABLE clientes (
+  id INTEGER PRIMARY KEY,
+  nome TEXT,
+  cidade TEXT
+);
+CREATE TABLE produtos (
+  id INTEGER PRIMARY KEY,
+  nome TEXT,
+  categoria TEXT,
+  preco REAL
+);
+CREATE TABLE pedidos (
+  id INTEGER PRIMARY KEY,
+  cliente_id INTEGER,
+  data_pedido TEXT,
+  status TEXT
+);
+CREATE TABLE itens_pedido (
+  id INTEGER PRIMARY KEY,
+  pedido_id INTEGER,
+  produto_id INTEGER,
+  quantidade INTEGER
+);
+
+INSERT INTO clientes VALUES
+ (1,'Marina Costa','Recife'),
+ (2,'Thiago Souza','Recife'),
+ (3,'Patrícia Melo','Olinda'),
+ (4,'Rodrigo Farias','Caruaru'),
+ (5,'Juliana Prado','Recife');
+
+INSERT INTO produtos VALUES
+ (1,'Fone Bluetooth','Eletrônicos',189.90),
+ (2,'Smartwatch X2','Eletrônicos',549.00),
+ (3,'Caixa de Som Mini','Eletrônicos',129.50),
+ (4,'Camiseta Básica','Roupas',49.90),
+ (5,'Jaqueta Jeans','Roupas',199.00),
+ (6,'Tênis Casual','Roupas',259.90),
+ (7,'O Alquimista','Livros',39.90),
+ (8,'Sapiens','Livros',54.90),
+ (9,'Jogo de Panelas','Casa',349.00),
+ (10,'Luminária de Mesa','Casa',89.90);
+
+INSERT INTO pedidos VALUES
+ (1,1,'2026-05-03','entregue'),
+ (2,1,'2026-06-10','pendente'),
+ (3,2,'2026-05-20','entregue'),
+ (4,3,'2026-05-28','cancelado'),
+ (5,2,'2026-06-02','pendente'),
+ (6,4,'2026-04-15','entregue'),
+ (7,3,'2026-06-15','pendente'),
+ (8,1,'2026-06-20','entregue');
+
+INSERT INTO itens_pedido VALUES
+ (1,1,1,2),
+ (2,1,4,1),
+ (3,2,2,1),
+ (4,3,5,1),
+ (5,3,6,2),
+ (6,4,7,1),
+ (7,5,9,1),
+ (8,6,3,1),
+ (9,7,1,1),
+ (10,8,6,1);
+`;
+
+const LOJA_EXERCISES = [
+  { tag:'SELECT básico', title:'Liste todos os produtos',
+    desc:'Mostre o nome e o preço de todos os produtos.',
+    hint:'SELECT nome, preco FROM produtos;',
+    expected:`SELECT nome, preco FROM produtos;` },
+  { tag:'WHERE', title:'Produtos acima de R$150',
+    desc:'Liste o nome dos produtos com preço maior que 150.',
+    hint:'Use WHERE preco > 150',
+    expected:`SELECT nome FROM produtos WHERE preco > 150;` },
+  { tag:'WHERE + comparação', title:'Só eletrônicos',
+    desc:'Liste nome e categoria dos produtos da categoria "Eletrônicos".',
+    hint:"WHERE categoria = 'Eletrônicos'",
+    expected:`SELECT nome, categoria FROM produtos WHERE categoria = 'Eletrônicos';` },
+  { tag:'ORDER BY', title:'Do mais caro pro mais barato',
+    desc:'Liste nome e preço de todos os produtos, ordenados do mais caro para o mais barato.',
+    hint:'ORDER BY preco DESC',
+    expected:`SELECT nome, preco FROM produtos ORDER BY preco DESC;` },
+  { tag:'COUNT', title:'Quantos produtos existem?',
+    desc:'Conte o número total de produtos no catálogo. Chame a coluna de total.',
+    hint:'SELECT COUNT(*) AS total FROM produtos;',
+    expected:`SELECT COUNT(*) AS total FROM produtos;` },
+  { tag:'GROUP BY', title:'Produtos por categoria',
+    desc:'Conte quantos produtos existem em cada categoria. Mostre categoria e a quantidade (chame de qtd), da maior para a menor.',
+    hint:'GROUP BY categoria ... ORDER BY qtd DESC',
+    expected:`SELECT categoria, COUNT(*) AS qtd FROM produtos GROUP BY categoria ORDER BY qtd DESC;` },
+  { tag:'JOIN', title:'Pedido com nome do cliente',
+    desc:'Liste o id do pedido e o nome do cliente que fez cada pedido.',
+    hint:'JOIN clientes ON pedidos.cliente_id = clientes.id',
+    expected:`SELECT pedidos.id, clientes.nome FROM pedidos JOIN clientes ON pedidos.cliente_id = clientes.id;` },
+  { tag:'JOIN + WHERE', title:'Pedidos de clientes do Recife',
+    desc:'Liste o id dos pedidos feitos por clientes da cidade "Recife".',
+    hint:"Faça o JOIN e filtre por clientes.cidade = 'Recife'",
+    expected:`SELECT pedidos.id FROM pedidos JOIN clientes ON pedidos.cliente_id = clientes.id WHERE clientes.cidade = 'Recife';` },
+  { tag:'JOIN triplo', title:'Itens de pedidos pendentes',
+    desc:'Liste o nome do produto e a quantidade para todos os itens de pedidos com status "pendente".',
+    hint:'Junte itens_pedido com produtos e pedidos; filtre WHERE pedidos.status = \'pendente\'',
+    expected:`SELECT produtos.nome, itens_pedido.quantidade FROM itens_pedido JOIN produtos ON itens_pedido.produto_id = produtos.id JOIN pedidos ON itens_pedido.pedido_id = pedidos.id WHERE pedidos.status = 'pendente';` },
+  { tag:'Subconsulta', title:'Clientes que nunca compraram',
+    desc:'Liste o nome dos clientes que nunca fizeram nenhum pedido.',
+    hint:'Use NOT IN com uma subconsulta que busca cliente_id em pedidos',
+    expected:`SELECT nome FROM clientes WHERE id NOT IN (SELECT cliente_id FROM pedidos);` },
+  { tag:'LEFT JOIN', title:'Produtos nunca vendidos',
+    desc:'Liste o nome dos produtos que nunca apareceram em nenhum item de pedido, usando LEFT JOIN.',
+    hint:'LEFT JOIN itens_pedido ... WHERE itens_pedido.id IS NULL',
+    expected:`SELECT produtos.nome FROM produtos LEFT JOIN itens_pedido ON produtos.id = itens_pedido.produto_id WHERE itens_pedido.id IS NULL;` },
+  { tag:'HAVING', title:'Clientes com mais de um pedido',
+    desc:'Liste o nome dos clientes que fizeram mais de 1 pedido, junto com a quantidade (chame de qtd).',
+    hint:'GROUP BY clientes.nome ... HAVING COUNT(*) > 1',
+    expected:`SELECT clientes.nome, COUNT(*) AS qtd FROM pedidos JOIN clientes ON pedidos.cliente_id = clientes.id GROUP BY clientes.nome HAVING COUNT(*) > 1;` },
+  { tag:'Datas', title:'Pedidos de maio de 2026',
+    desc:'Liste todos os pedidos (todas as colunas) cuja data_pedido é de maio de 2026.',
+    hint:"Use WHERE data_pedido LIKE '2026-05%'",
+    expected:`SELECT * FROM pedidos WHERE data_pedido LIKE '2026-05%';` },
+  { tag:'CASE WHEN', title:'Faixa de preço',
+    desc:'Liste o nome de cada produto junto com uma coluna faixa: "Caro" se preco >= 200, senão "Acessível".',
+    hint:"CASE WHEN preco >= 200 THEN 'Caro' ELSE 'Acessível' END AS faixa",
+    expected:`SELECT nome, CASE WHEN preco >= 200 THEN 'Caro' ELSE 'Acessível' END AS faixa FROM produtos;` },
+  { tag:'Subconsulta correlacionada', title:'O produto mais caro de cada categoria',
+    desc:'Liste nome, categoria e preço apenas dos produtos que têm o maior preço da respectiva categoria.',
+    hint:'WHERE preco = (SELECT MAX(preco) FROM produtos p2 WHERE p2.categoria = produtos.categoria) — dê um apelido à tabela externa',
+    expected:`SELECT nome, categoria, preco FROM produtos p1 WHERE preco = (SELECT MAX(preco) FROM produtos p2 WHERE p2.categoria = p1.categoria);` },
+];
+
+const LOJA_SCHEMA_REF = [
+  { name:'clientes', cols:['id (PK)','nome','cidade'] },
+  { name:'produtos', cols:['id (PK)','nome','categoria','preco'] },
+  { name:'pedidos', cols:['id (PK)','cliente_id (FK → clientes.id)','data_pedido','status'] },
+  { name:'itens_pedido', cols:['id (PK)','pedido_id (FK → pedidos.id)','produto_id (FK → produtos.id)','quantidade'] }
+];
+
+const TRACKS = {
+  biblioteca: {
+    key:'biblioteca', emoji:'📚', label:'Biblioteca Municipal',
+    tagline:'SELECT, JOIN, GROUP BY e subconsultas com livros, autores e empréstimos.',
+    eyebrow:'Banca de treino · Trilha 1',
+    title:'SQL na Biblioteca Municipal',
+    desc:'Um banco SQLite de verdade, rodando no seu celular. Resolva os exercícios escrevendo consultas reais sobre livros, autores e empréstimos.',
+    schemaSql: BIBLIOTECA_SCHEMA,
+    schemaRef: BIBLIOTECA_SCHEMA_REF,
+    exercises: BIBLIOTECA_EXERCISES,
+    er(){
+      const tables = [
+        { name:'autores', x:8,  y:10, fields:['id','nome'] },
+        { name:'livros',  x:120, y:10, fields:['id','autor_id','titulo'] },
+        { name:'usuarios',x:8,  y:78, fields:['id','nome'] },
+        { name:'emprestimos', x:120, y:78, fields:['livro_id','usuario_id'] }
+      ];
+      const links = [ [174,42,174,78], [62,42,120,90], [62,78,120,90] ];
+      return { tables, links };
+    }
+  },
+  loja: {
+    key:'loja', emoji:'🛒', label:'Loja Online',
+    tagline:'Os mesmos conceitos, num schema de e-commerce: clientes, produtos e pedidos.',
+    eyebrow:'Banca de treino · Trilha 2',
+    title:'SQL na Loja Online',
+    desc:'Mesmo motor SQLite, schema novo. Pratique consultas sobre clientes, produtos, pedidos e itens de pedido.',
+    schemaSql: LOJA_SCHEMA,
+    schemaRef: LOJA_SCHEMA_REF,
+    exercises: LOJA_EXERCISES,
+    er(){
+      const tables = [
+        { name:'clientes', x:8,  y:10, fields:['id','nome'] },
+        { name:'pedidos',  x:120, y:10, fields:['id','cliente_id'] },
+        { name:'produtos',x:8,  y:78, fields:['id','preco'] },
+        { name:'itens_pedido', x:120, y:78, fields:['pedido_id','produto_id'] }
+      ];
+      const links = [ [62,42,174,10+16], [174,42,174,78], [62,78,120,90] ];
+      return { tables, links };
+    }
+  }
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let db = null;
+let currentTrackKey = null;
+let exerciseOrder = [];
+let current = 0;
+let infiniteMode = false;
+let round = 1;
+let solvedByTrack = {};
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
 function normalizeRows(res){
   if(!res || !res.length) return { columns: [], values: [] };
   return { columns: res[0].columns, values: res[0].values };
 }
-
 function rowsEqual(a, b){
   if(a.values.length !== b.values.length) return false;
   const norm = (rows) => rows.map(r => r.map(v => v===null?'∅':String(v)).join('|')).sort();
@@ -389,7 +627,6 @@ function rowsEqual(a, b){
   for(let i=0;i<na.length;i++){ if(na[i] !== nb[i]) return false; }
   return true;
 }
-
 function renderTable(res){
   if(!res.columns.length){
     return '<div class="result-status neutral">Consulta executada — nenhuma linha retornada.</div>';
@@ -405,12 +642,84 @@ function renderTable(res){
   return html;
 }
 
+/* ============================================================
+   TRACK SELECT SCREEN
+   ============================================================ */
+function showTrackSelect(){
+  currentTrackKey = null;
+  document.getElementById('heroEyebrow').textContent = 'Banca de treino';
+  document.getElementById('heroTitle').textContent = 'Treino de SQL';
+  document.getElementById('heroDesc').textContent = 'Um banco SQLite de verdade, rodando no seu celular. Escolha uma trilha para começar.';
+  document.getElementById('switchTrackBtn').classList.add('hidden');
+  document.getElementById('progressWrap').classList.add('hidden');
+  document.getElementById('infiniteRow').classList.add('hidden');
+  document.getElementById('schemaToggle').classList.add('hidden');
+  document.getElementById('schemaBody').classList.remove('show');
+  document.getElementById('navRow').classList.add('hidden');
+  document.getElementById('erSvg').innerHTML = '';
+  document.getElementById('app').innerHTML = '';
+
+  const sel = document.getElementById('trackSelect');
+  sel.innerHTML = Object.values(TRACKS).map(t => {
+    const done = solvedByTrack[t.key] ? solvedByTrack[t.key].filter(Boolean).length : 0;
+    return `
+    <div class="track-card" data-key="${t.key}">
+      <div class="track-emoji">${t.emoji}</div>
+      <div class="track-info">
+        <h3>${t.label}</h3>
+        <p>${t.tagline}</p>
+        <div class="track-meta">${t.exercises.length} exercícios ${done ? '· ' + done + ' resolvidos' : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  sel.querySelectorAll('.track-card').forEach(card => {
+    card.onclick = () => selectTrack(card.dataset.key);
+  });
+}
+
+function selectTrack(key){
+  currentTrackKey = key;
+  const t = TRACKS[key];
+
+  document.getElementById('trackSelect').innerHTML = '';
+  document.getElementById('heroEyebrow').textContent = t.eyebrow;
+  document.getElementById('heroTitle').textContent = t.title;
+  document.getElementById('heroDesc').textContent = t.desc;
+  document.getElementById('switchTrackBtn').classList.remove('hidden');
+  document.getElementById('progressWrap').classList.remove('hidden');
+  document.getElementById('infiniteRow').classList.remove('hidden');
+  document.getElementById('schemaToggle').classList.remove('hidden');
+
+  db = new SQL.Database();
+  db.run(t.schemaSql);
+
+  if(!solvedByTrack[key]) solvedByTrack[key] = new Array(t.exercises.length).fill(false);
+  exerciseOrder = t.exercises.map((_,i) => i);
+  current = 0;
+  infiniteMode = false;
+  round = 1;
+  document.getElementById('infiniteBtn').textContent = '🔀 modo infinito: desligado';
+  document.getElementById('infiniteBtn').classList.remove('on');
+
+  renderSchemaRef(t.schemaRef);
+  renderERDiagram(t.er());
+  document.getElementById('navRow').classList.remove('hidden');
+  renderExercise();
+}
+
+/* ============================================================
+   EXERCISE FLOW
+   ============================================================ */
 function renderExercise(){
-  const ex = EXERCISES[current];
+  const t = TRACKS[currentTrackKey];
+  const exIndex = exerciseOrder[current];
+  const ex = t.exercises[exIndex];
+  const solved = solvedByTrack[currentTrackKey];
+
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="card">
-      <span class="ex-tag">${ex.tag}${solved[current] ? ' · resolvido ✓' : ''}</span>
+      <span class="ex-tag">${ex.tag}${solved[exIndex] ? ' · resolvido ✓' : ''}</span>
       <div class="ex-title">${ex.title}</div>
       <div class="ex-desc">${ex.desc}</div>
       <button class="hint-toggle" id="hintToggle">💡 mostrar dica</button>
@@ -418,7 +727,7 @@ function renderExercise(){
 
       <div class="editor-wrap">
         <div class="editor-label">Sua consulta</div>
-        <textarea id="sqlInput" spellcheck="false" placeholder="SELECT ...">${solved[current] ? ex.expected : ''}</textarea>
+        <textarea id="sqlInput" spellcheck="false" placeholder="SELECT ...">${solved[exIndex] ? ex.expected : ''}</textarea>
       </div>
       <div class="btn-row">
         <button class="btn-run" id="runBtn">▶ Executar</button>
@@ -441,6 +750,9 @@ function renderExercise(){
 }
 
 function runQuery(){
+  const t = TRACKS[currentTrackKey];
+  const exIndex = exerciseOrder[current];
+  const ex = t.exercises[exIndex];
   const input = document.getElementById('sqlInput').value.trim();
   const wrap = document.getElementById('resultWrap');
   if(!input){
@@ -449,11 +761,11 @@ function runQuery(){
   }
   try{
     const userRes = normalizeRows(db.exec(input));
-    const expectedRes = normalizeRows(db.exec(EXERCISES[current].expected));
+    const expectedRes = normalizeRows(db.exec(ex.expected));
     const correct = rowsEqual(userRes, expectedRes);
     let statusHtml;
     if(correct){
-      solved[current] = true;
+      solvedByTrack[currentTrackKey][exIndex] = true;
       statusHtml = '<div class="result-status ok">✓ Correto! Resultado bate com o esperado.</div>';
     } else {
       statusHtml = '<div class="result-status err">✗ A consulta rodou, mas o resultado é diferente do esperado. Tente de novo.</div>';
@@ -467,17 +779,28 @@ function runQuery(){
 }
 
 function updateProgress(){
+  const t = TRACKS[currentTrackKey];
+  const solved = solvedByTrack[currentTrackKey];
   const done = solved.filter(Boolean).length;
-  const pct = Math.round((done/EXERCISES.length)*100);
+  const pct = Math.round((done/t.exercises.length)*100);
   document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressText').textContent = `Exercício ${current+1} de ${EXERCISES.length}`;
-  document.getElementById('progressPct').textContent = `${done}/${EXERCISES.length} resolvidos`;
+  if(infiniteMode){
+    document.getElementById('progressText').textContent = `Rodada ${round} · exercício ${current+1} de ${exerciseOrder.length}`;
+  } else {
+    document.getElementById('progressText').textContent = `Exercício ${current+1} de ${t.exercises.length}`;
+  }
+  document.getElementById('progressPct').textContent = `${done}/${t.exercises.length} resolvidos`;
 }
 
 function updateNav(){
   document.getElementById('prevBtn').disabled = current === 0;
   const nextBtn = document.getElementById('nextBtn');
-  if(current === EXERCISES.length - 1){
+  const t = TRACKS[currentTrackKey];
+  const solved = solvedByTrack[currentTrackKey];
+  if(infiniteMode){
+    nextBtn.textContent = 'próximo →';
+    nextBtn.disabled = false;
+  } else if(current === exerciseOrder.length - 1){
     nextBtn.textContent = solved.every(Boolean) ? 'ver resumo →' : 'próximo →';
   } else {
     nextBtn.textContent = 'próximo →';
@@ -488,22 +811,57 @@ document.getElementById('prevBtn').onclick = () => {
   if(current > 0){ current--; renderExercise(); }
 };
 document.getElementById('nextBtn').onclick = () => {
-  if(current < EXERCISES.length - 1){ current++; renderExercise(); }
-  else if(solved.every(Boolean)){ renderDone(); }
-  else { current = EXERCISES.findIndex(( _,i) => !solved[i]); renderExercise(); }
+  const t = TRACKS[currentTrackKey];
+  const solved = solvedByTrack[currentTrackKey];
+  if(current < exerciseOrder.length - 1){
+    current++; renderExercise();
+  } else if(infiniteMode){
+    exerciseOrder = shuffle(t.exercises.map((_,i)=>i));
+    current = 0; round++;
+    renderExercise();
+  } else if(solved.every(Boolean)){
+    renderDone();
+  } else {
+    current = exerciseOrder.findIndex((idx) => !solved[idx]);
+    renderExercise();
+  }
 };
 
+document.getElementById('infiniteBtn').onclick = () => {
+  const t = TRACKS[currentTrackKey];
+  infiniteMode = !infiniteMode;
+  const btn = document.getElementById('infiniteBtn');
+  if(infiniteMode){
+    btn.textContent = '🔀 modo infinito: ligado';
+    btn.classList.add('on');
+    exerciseOrder = shuffle(t.exercises.map((_,i)=>i));
+    current = 0; round = 1;
+  } else {
+    btn.textContent = '🔀 modo infinito: desligado';
+    btn.classList.remove('on');
+    exerciseOrder = t.exercises.map((_,i)=>i);
+    current = 0;
+  }
+  renderExercise();
+};
+
+document.getElementById('switchTrackBtn').onclick = showTrackSelect;
+
 function renderDone(){
-  document.getElementById('navRow').style.display = 'none';
   document.getElementById('app').innerHTML = `
     <div class="done-banner">
       <div class="big">🏁</div>
       <div class="ex-title" style="margin-top:6px;">Trilha concluída!</div>
-      <p>Você resolveu os ${EXERCISES.length} exercícios: SELECT, WHERE, ORDER BY, agregações, JOIN e subconsultas.</p>
+      <p>Você resolveu os ${TRACKS[currentTrackKey].exercises.length} exercícios desta trilha. Que tal tentar a outra, ou ligar o modo infinito para continuar treinando?</p>
+      <button class="btn-run" id="doneBackBtn">↩ escolher outra trilha</button>
     </div>
   `;
+  document.getElementById('doneBackBtn').onclick = showTrackSelect;
 }
 
+/* ============================================================
+   SCHEMA REFERENCE + ER DIAGRAM
+   ============================================================ */
 document.getElementById('schemaToggle').onclick = () => {
   const body = document.getElementById('schemaBody');
   const arrow = document.getElementById('schemaArrow');
@@ -511,13 +869,7 @@ document.getElementById('schemaToggle').onclick = () => {
   arrow.textContent = body.classList.contains('show') ? '▴' : '▾';
 };
 
-function renderSchemaRef(){
-  const tables = [
-    { name: 'autores', cols: ['id (PK)','nome','nacionalidade'] },
-    { name: 'livros', cols: ['id (PK)','titulo','autor_id (FK → autores.id)','ano','genero','disponivel (0/1)'] },
-    { name: 'usuarios', cols: ['id (PK)','nome','cidade'] },
-    { name: 'emprestimos', cols: ['id (PK)','livro_id (FK → livros.id)','usuario_id (FK → usuarios.id)','data_emprestimo','data_devolucao'] }
-  ];
+function renderSchemaRef(tables){
   document.getElementById('schemaBody').innerHTML = tables.map(t => `
     <div class="schema-table">
       <h4>${t.name}</h4>
@@ -526,19 +878,12 @@ function renderSchemaRef(){
   `).join('');
 }
 
-function renderERDiagram(){
-  const tables = [
-    { name:'autores', x:8,  y:10, fields:['id','nome'] },
-    { name:'livros',  x:120, y:10, fields:['id','autor_id','titulo'] },
-    { name:'usuarios',x:8,  y:78, fields:['id','nome'] },
-    { name:'emprestimos', x:120, y:78, fields:['livro_id','usuario_id'] }
-  ];
+function renderERDiagram({tables, links}){
   const w = 108, rowH = 12, headerH = 16;
   let svg = '';
-  // links
-  svg += `<line class="er-link er-pulse" x1="174" y1="42" x2="174" y2="78" />`;
-  svg += `<line class="er-link er-pulse" x1="62" y1="42" x2="120" y2="90" />`;
-  svg += `<line class="er-link er-pulse" x1="62" y1="78" x2="120" y2="90" />`;
+  links.forEach(([x1,y1,x2,y2]) => {
+    svg += `<line class="er-link er-pulse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
+  });
   tables.forEach(t => {
     const h = headerH + t.fields.length*rowH + 6;
     svg += `<g class="er-table" transform="translate(${t.x},${t.y})">
@@ -550,15 +895,15 @@ function renderERDiagram(){
   document.getElementById('erSvg').innerHTML = svg;
 }
 
+/* ============================================================
+   INIT
+   ============================================================ */
 async function init(){
-  renderSchemaRef();
-  renderERDiagram();
+  document.getElementById('app').innerHTML = '<div class="loading-note">carregando motor SQLite…</div>';
   try{
-    const SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` });
-    db = new SQL.Database();
-    db.run(SCHEMA_SQL);
-    document.getElementById('navRow').style.display = 'flex';
-    renderExercise();
+    window.SQL = await initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}` });
+    document.getElementById('app').innerHTML = '';
+    showTrackSelect();
   } catch(e){
     document.getElementById('app').innerHTML = `<div class="loading-note">Não foi possível carregar o motor SQL: ${e.message}</div>`;
   }
